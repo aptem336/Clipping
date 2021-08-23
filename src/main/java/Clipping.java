@@ -11,13 +11,14 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Clipping implements GLEventListener, MouseListener {
 
-    private final float[] clearColor = new float[]{0.0F, 0.0F, 0.0F, 1.0F};//цвет фона
-    private final float[] polygonColor = new float[]{0.75F, 0.75F, 0.75F, 1.0F};//цвет отсекающего полигона
+    private final float[] clearColor = new float[]{0.25F, 0.25F, 0.25F, 1.0F};//цвет фона
+    private final float[] polygonColor = new float[]{0.0F, 0.0F, 0.0F, 1.0F};//цвет отсекающего полигона
     private final float[] clippedSectionColor = new float[]{1.0F, 0.0F, 0.0F, 1.0F};//цвет отсеченной части отрезка
     private final float[] unclippedSectionColor = new float[]{1.0F, 1.0F, 1.0F, 1.0F};//цвет не отсеченной части отрезка
     private final List<Point> polygonPoints = new ArrayList<>();//массив точек отсекающего многоугольника
@@ -60,6 +61,8 @@ public class Clipping implements GLEventListener, MouseListener {
         //включение смешивания и его функции (для прозрачности)
         gl.glEnable(GL2.GL_BLEND);
         gl.glBlendFunc(GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
+        //начала двумерной отрисовки
+        gl.glOrtho(0, drawable.getSurfaceWidth(), 0, drawable.getSurfaceHeight(), 0, 1);
     }
 
     public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
@@ -69,7 +72,26 @@ public class Clipping implements GLEventListener, MouseListener {
         GL2 gl = drawable.getGL().getGL2();
         //очистка цветового буффера
         gl.glClear(GL.GL_COLOR_BUFFER_BIT);
-
+        //очистка фона
+        gl.glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
+        //отрисовка отсекающего полигона
+        gl.glColor4fv(FloatBuffer.wrap(polygonColor));
+        gl.glBegin(GL2.GL_LINE_LOOP);
+        for (int i = 0; i < polygonPoints.size(); i++) {
+            Point polygonPoint = polygonPoints.get(i);
+            gl.glVertex2i(polygonPoint.x, drawable.getSurfaceHeight() - polygonPoint.y);
+        }
+        gl.glEnd();
+        //отрисока отсекаемых отрезков
+        gl.glColor4fv(FloatBuffer.wrap(unclippedSectionColor));
+        gl.glBegin(GL2.GL_LINES);
+        for (int i = 0; i < sectionPoints.size() - 1; i += 2) {
+            Point sectionPointA = sectionPoints.get(i);
+            Point sectionPointB = sectionPoints.get(i + 1);
+            gl.glVertex2i(sectionPointA.x, drawable.getSurfaceHeight() - sectionPointA.y);
+            gl.glVertex2i(sectionPointB.x, drawable.getSurfaceHeight() - sectionPointB.y);
+        }
+        gl.glEnd();
     }
 
 
@@ -89,10 +111,10 @@ public class Clipping implements GLEventListener, MouseListener {
         //ЛКМ - добавляем точку многоугольника
         if (mouseEvent.getButton() == MouseEvent.BUTTON1) {
             polygonPoints.add(mouseEvent.getPoint());
-        //ПКМ - добавляем точку отрезка
+            //ПКМ - добавляем точку отрезка
         } else if (mouseEvent.getButton() == MouseEvent.BUTTON2) {
             sectionPoints.add(mouseEvent.getPoint());
-        //ПКМ - очищаем массивы точек
+            //ПКМ - очищаем массивы точек
         } else if (mouseEvent.getButton() == MouseEvent.BUTTON3) {
             polygonPoints.clear();
             sectionPoints.clear();
