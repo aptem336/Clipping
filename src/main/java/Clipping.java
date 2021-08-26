@@ -6,7 +6,6 @@ import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.Animator;
 
 import javax.swing.*;
-import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
@@ -19,10 +18,10 @@ public class Clipping implements GLEventListener, MouseListener {
 
     private final float[] clearColor = new float[]{0.25F, 0.25F, 0.25F, 1.0F};//цвет фона
     private final float[] polygonColor = new float[]{0.0F, 0.0F, 0.0F, 1.0F};//цвет отсекающего полигона
-    private final float[] clippedSectionColor = new float[]{1.0F, 0.0F, 0.0F, 1.0F};//цвет отсеченной части отрезка
-    private final float[] unclippedSectionColor = new float[]{1.0F, 1.0F, 1.0F, 1.0F};//цвет не отсеченной части отрезка
-    private final List<Point> polygonPoints = new ArrayList<>();//массив точек отсекающего многоугольника
-    private final List<Point> sectionPoints = new ArrayList<>();//массив точек отсекаемых отрезков
+    private final float[] clippedSectionColor = new float[]{0.0F, 0.0F, 0.0F, 1.0F};//цвет отсеченной части отрезка
+    private final float[] unclippedSectionColor = new float[]{1.0F, 0.0F, 0.0F, 1.0F};//цвет не отсеченной части отрезка
+    private final List<Vector> polygonVectors = new ArrayList<>();//массив векторов отсекающего многоугольника
+    private final List<Vector> sectionVectors = new ArrayList<>();//массив векторов отсекаемых отрезков
 
     public static void main(String[] args) {
         //инициализация фрейма
@@ -75,21 +74,64 @@ public class Clipping implements GLEventListener, MouseListener {
         //очистка фона
         gl.glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
         //отрисовка отсекающего полигона
-        gl.glColor4fv(FloatBuffer.wrap(polygonColor));
-        gl.glBegin(GL2.GL_LINE_LOOP);
-        for (int i = 0; i < polygonPoints.size(); i++) {
-            Point polygonPoint = polygonPoints.get(i);
-            gl.glVertex2i(polygonPoint.x, drawable.getSurfaceHeight() - polygonPoint.y);
-        }
-        gl.glEnd();
-        //отрисока отсекаемых отрезков
-        gl.glColor4fv(FloatBuffer.wrap(unclippedSectionColor));
         gl.glBegin(GL2.GL_LINES);
-        for (int i = 0; i < sectionPoints.size() - 1; i += 2) {
-            Point sectionPointA = sectionPoints.get(i);
-            Point sectionPointB = sectionPoints.get(i + 1);
-            gl.glVertex2i(sectionPointA.x, drawable.getSurfaceHeight() - sectionPointA.y);
-            gl.glVertex2i(sectionPointB.x, drawable.getSurfaceHeight() - sectionPointB.y);
+        List<Vector> unclippedVectors = new ArrayList<>();
+        for (int i = 0; i < polygonVectors.size(); i++) {
+            //вектор начала РЕБРА
+            Vector edgeVectorA = polygonVectors.get(i);
+            //вектор конца РЕБРА
+            Vector edgeVectorB = polygonVectors.get((i + 1) % polygonVectors.size());
+            //отрисовка РЕБРА
+            gl.glColor4fv(FloatBuffer.wrap(polygonColor));
+            gl.glVertex2f(edgeVectorA.getX(), drawable.getSurfaceHeight() - edgeVectorA.getY());
+            gl.glVertex2f(edgeVectorB.getX(), drawable.getSurfaceHeight() - edgeVectorB.getY());
+            //вектор РЕБРА
+            Vector edgeVector = edgeVectorB.difference(edgeVectorA);
+            //левая нормаль РЕБРА
+            Vector edgeNormal = edgeVector.leftNormal();
+            gl.glColor4fv(FloatBuffer.wrap(clippedSectionColor));
+            for (int j = 0; j < sectionVectors.size() - 1; j += 2) {
+                //вектор начала ОТРЕЗКА
+                Vector sectionVectorA = sectionVectors.get(j);
+                //вектор конца ОТРЕЗКА
+                Vector sectionVectorB = sectionVectors.get(j + 1);
+                //отрисовка ОТРЕЗКА
+                gl.glVertex2f(sectionVectorA.getX(), drawable.getSurfaceHeight() - sectionVectorA.getY());
+                gl.glVertex2f(sectionVectorB.getX(), drawable.getSurfaceHeight() - sectionVectorB.getY());
+                //вектор ОТРЕЗКА
+                Vector sectionVector = sectionVectorB.difference(sectionVectorA);
+                //начальное значение параметров t для начала и конца отрезка
+                float tA = 0.0f;
+                float tB = 1.0f;
+                //СКАЛЯРНОЕ произведение нормали РЕБРА и вектора ОТРЕЗКА
+                float dotProduct = edgeNormal.dotProduct(sectionVector);
+                float t = edgeVector.crossProduct(edgeVectorA.difference(sectionVectorA)) / edgeVector.crossProduct(sectionVector);
+                switch (Integer.compare((int) dotProduct, 0)) {
+                    case -1:
+                        if (t > tA) {
+                            tA = t;
+                        }
+                        break;
+                    case 1:
+                        if (t < tB) {
+                            tB = t;
+                        }
+                        break;
+                    case 0:
+                        break;
+                }
+                if (tA < tB) {
+                    unclippedVectors.add(sectionVectorA.sum(sectionVectorB.difference(sectionVectorA).product(tA)));
+                    unclippedVectors.add(sectionVectorA.sum(sectionVectorB.difference(sectionVectorA).product(tB)));
+                }
+            }
+        }
+        gl.glColor4fv(FloatBuffer.wrap(unclippedSectionColor));
+        for (int i = 0; i < unclippedVectors.size() - 1; i += 2) {
+            Vector unclippedSectorA = unclippedVectors.get(i);
+            Vector unclippedSectorB = unclippedVectors.get(i + 1);
+            gl.glVertex2f(unclippedSectorA.getX(), drawable.getSurfaceHeight() - unclippedSectorA.getY());
+            gl.glVertex2f(unclippedSectorB.getX(), drawable.getSurfaceHeight() - unclippedSectorB.getY());
         }
         gl.glEnd();
     }
@@ -108,16 +150,16 @@ public class Clipping implements GLEventListener, MouseListener {
 
     @Override
     public void mouseReleased(MouseEvent mouseEvent) {
-        //ЛКМ - добавляем точку многоугольника
+        //ЛКМ - добавляем вектор многоугольника
         if (mouseEvent.getButton() == MouseEvent.BUTTON1) {
-            polygonPoints.add(mouseEvent.getPoint());
-            //ПКМ - добавляем точку отрезка
+            polygonVectors.add(new Vector(mouseEvent.getPoint()));
+            //ПКМ - добавляем вектор отрезка
         } else if (mouseEvent.getButton() == MouseEvent.BUTTON2) {
-            sectionPoints.add(mouseEvent.getPoint());
-            //ПКМ - очищаем массивы точек
+            sectionVectors.add(new Vector(mouseEvent.getPoint()));
+            //ПКМ - очищаем массивы векторов
         } else if (mouseEvent.getButton() == MouseEvent.BUTTON3) {
-            polygonPoints.clear();
-            sectionPoints.clear();
+            polygonVectors.clear();
+            sectionVectors.clear();
         }
     }
 
