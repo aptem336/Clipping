@@ -33,14 +33,14 @@ public class Clipping implements GLEventListener, MouseListener {
         GLCanvas canvas = new GLCanvas();
         canvas.setSize(frame.getSize());
         canvas.setLocation(0, 0);
-        //доабвление слушателей GL и мыщи - интанса самого класса
+        //доабвление слушателей GL и мыщи - инстанса самого класса
         Clipping clipping = new Clipping();
         canvas.addGLEventListener(clipping);
         canvas.addMouseListener(clipping);
         //добавление канвы на фрейм
         frame.add(canvas);
         final Animator animator = new Animator(canvas);
-        //добавление слушаетля закрытия окна
+        //добавление слушателя закрытия окна
         frame.addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
                 new Thread(() -> {
@@ -57,9 +57,6 @@ public class Clipping implements GLEventListener, MouseListener {
 
     public void init(GLAutoDrawable drawable) {
         GL2 gl = drawable.getGL().getGL2();
-        //включение смешивания и его функции (для прозрачности)
-        gl.glEnable(GL2.GL_BLEND);
-        gl.glBlendFunc(GL2.GL_SRC_ALPHA, GL2.GL_ONE_MINUS_SRC_ALPHA);
         //начала двумерной отрисовки
         gl.glOrtho(0, drawable.getSurfaceWidth(), 0, drawable.getSurfaceHeight(), 0, 1);
     }
@@ -112,27 +109,32 @@ public class Clipping implements GLEventListener, MouseListener {
                 Vector sectionVectorB = sectionVectors.get(j + 1);
                 //вектор ОТРЕЗКА
                 Vector sectionVector = sectionVectorB.difference(sectionVectorA);
-                //начальное значение параметров t для начала и конца отрезка
+                //Каждый отсекаемый отрезок содержит координаты начала и конца, а также два параметра tA и tB, соответствующие началу и концу отрезка.
                 float tA = 0.0f;
                 float tB = 1.0f;
-                //СКАЛЯРНОЕ произведение нормали РЕБРА и вектора ОТРЕЗКА
+                //Для каждого ребра E вычисляется параметр tE, описывающий пересечение E с прямой, на которой лежит отрезок P.
+                float tE = edgeVector.crossProduct(edgeVectorA.difference(sectionVectorA)) / edgeVector.crossProduct(sectionVector);
+                //Вычисляется скалярное произведение вектора E и внешней нормали N, в зависимости от знака которого возникает одна из следующих ситуаций:
                 float dotProduct = edgeNormal.dotProduct(sectionVector);
-                float t = edgeVector.crossProduct(edgeVectorA.difference(sectionVectorA)) / edgeVector.crossProduct(sectionVector);
                 switch (Integer.compare((int) dotProduct, 0)) {
+                    //E · N < 0 — отрезок P направлен с внутренней на внешнюю сторону ребра E. В этом случае параметр tA заменяется на tE, если tE > tA.
                     case -1:
-                        if (t > tA) {
-                            tA = t;
+                        if (tE > tA) {
+                            tA = tE;
                         }
                         break;
+                    //E · N > 0 — отрезок P направлен с внешней на внутреннюю сторону ребра E. В этом случае параметр tB заменяется на tE, если tE < tB.
                     case 1:
-                        if (t < tB) {
-                            tB = t;
+                        if (tE < tB) {
+                            tB = tE;
                         }
                         break;
+                    //E · N = 0 — отрезок P параллелен ребру E. Отрезок P отбрасывается как невидимый, если находится по правую сторону от E.
                     case 0:
+                        if (edgeVector.crossProduct(edgeVectorB.difference(sectionVectorA)) < 0) continue;
                         break;
                 }
-                //если t конца меньше t начала, то есть неотсеченный кусок ОТРЕЗКА
+                //Если tA <  tB, то заданная параметрами tA и tB часть отрезка P видима. В противном случае отрезок P полностью невидим.
                 if (tA < tB) {
                     //вектор начала неотсеченного куска ОТРЕЗКА
                     Vector unclippedSectionA = sectionVectorA.sum(sectionVectorB.difference(sectionVectorA).product(tA));
