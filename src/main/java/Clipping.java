@@ -17,9 +17,9 @@ import java.util.List;
 public class Clipping implements GLEventListener, MouseListener {
 
     private final float[] clearColor = new float[]{0.25F, 0.25F, 0.25F, 1.0F};//цвет фона
-    private final float[] polygonColor = new float[]{0.0F, 0.0F, 0.0F, 1.0F};//цвет отсекающего полигона
-    private final float[] clippedSectionColor = new float[]{0.0F, 0.0F, 0.0F, 1.0F};//цвет отсеченной части отрезка
-    private final float[] unclippedSectionColor = new float[]{1.0F, 0.0F, 0.0F, 1.0F};//цвет не отсеченной части отрезка
+    private final FloatBuffer polygonColor = FloatBuffer.wrap(new float[]{0.0F, 0.0F, 0.0F});//цвет отсекающего полигона
+    private final FloatBuffer clippedSectionColor = FloatBuffer.wrap(new float[]{0.0F, 0.0F, 0.0F});//цвет отсеченной части отрезка
+    private final FloatBuffer unclippedSectionColor = FloatBuffer.wrap(new float[]{1.0F, 0.0F, 0.0F});//цвет не отсеченной части отрезка
     private final List<Vector> polygonVectors = new ArrayList<>();//массив векторов отсекающего многоугольника
     private final List<Vector> sectionVectors = new ArrayList<>();//массив векторов отсекаемых отрезков
 
@@ -75,29 +75,41 @@ public class Clipping implements GLEventListener, MouseListener {
         gl.glClearColor(clearColor[0], clearColor[1], clearColor[2], clearColor[3]);
         //отрисовка отсекающего полигона
         gl.glBegin(GL2.GL_LINES);
-        List<Vector> unclippedVectors = new ArrayList<>();
+        gl.glColor3fv(polygonColor);
         for (int i = 0; i < polygonVectors.size(); i++) {
             //вектор начала РЕБРА
             Vector edgeVectorA = polygonVectors.get(i);
             //вектор конца РЕБРА
             Vector edgeVectorB = polygonVectors.get((i + 1) % polygonVectors.size());
             //отрисовка РЕБРА
-            gl.glColor4fv(FloatBuffer.wrap(polygonColor));
             gl.glVertex2f(edgeVectorA.getX(), drawable.getSurfaceHeight() - edgeVectorA.getY());
             gl.glVertex2f(edgeVectorB.getX(), drawable.getSurfaceHeight() - edgeVectorB.getY());
+        }
+        gl.glColor3fv(clippedSectionColor);
+        for (int j = 0; j < sectionVectors.size() - 1; j += 2) {
+            //вектор начала ОТРЕЗКА
+            Vector sectionVectorA = sectionVectors.get(j);
+            //вектор конца ОТРЕЗКА
+            Vector sectionVectorB = sectionVectors.get(j + 1);
+            //отрисовка ОТРЕЗКА
+            gl.glVertex2f(sectionVectorA.getX(), drawable.getSurfaceHeight() - sectionVectorA.getY());
+            gl.glVertex2f(sectionVectorB.getX(), drawable.getSurfaceHeight() - sectionVectorB.getY());
+        }
+        gl.glColor3fv(unclippedSectionColor);
+        for (int i = 0; i < polygonVectors.size(); i++) {
+            //вектор начала РЕБРА
+            Vector edgeVectorA = polygonVectors.get(i);
+            //вектор конца РЕБРА
+            Vector edgeVectorB = polygonVectors.get((i + 1) % polygonVectors.size());
             //вектор РЕБРА
             Vector edgeVector = edgeVectorB.difference(edgeVectorA);
             //левая нормаль РЕБРА
             Vector edgeNormal = edgeVector.leftNormal();
-            gl.glColor4fv(FloatBuffer.wrap(clippedSectionColor));
             for (int j = 0; j < sectionVectors.size() - 1; j += 2) {
                 //вектор начала ОТРЕЗКА
                 Vector sectionVectorA = sectionVectors.get(j);
                 //вектор конца ОТРЕЗКА
                 Vector sectionVectorB = sectionVectors.get(j + 1);
-                //отрисовка ОТРЕЗКА
-                gl.glVertex2f(sectionVectorA.getX(), drawable.getSurfaceHeight() - sectionVectorA.getY());
-                gl.glVertex2f(sectionVectorB.getX(), drawable.getSurfaceHeight() - sectionVectorB.getY());
                 //вектор ОТРЕЗКА
                 Vector sectionVector = sectionVectorB.difference(sectionVectorA);
                 //начальное значение параметров t для начала и конца отрезка
@@ -120,18 +132,17 @@ public class Clipping implements GLEventListener, MouseListener {
                     case 0:
                         break;
                 }
+                //если t конца меньше t начала, то есть неотсеченный кусок ОТРЕЗКА
                 if (tA < tB) {
-                    unclippedVectors.add(sectionVectorA.sum(sectionVectorB.difference(sectionVectorA).product(tA)));
-                    unclippedVectors.add(sectionVectorA.sum(sectionVectorB.difference(sectionVectorA).product(tB)));
+                    //вектор начала неотсеченного куска ОТРЕЗКА
+                    Vector unclippedSectionA = sectionVectorA.sum(sectionVectorB.difference(sectionVectorA).product(tA));
+                    //вектор конца неотсеченного куска ОТРЕЗКА
+                    Vector unclippedSectionB = sectionVectorA.sum(sectionVectorB.difference(sectionVectorA).product(tB));
+                    //отрисовка неотсеченного куска ОТРЕЗКА
+                    gl.glVertex2f(unclippedSectionA.getX(), drawable.getSurfaceHeight() - unclippedSectionA.getY());
+                    gl.glVertex2f(unclippedSectionB.getX(), drawable.getSurfaceHeight() - unclippedSectionB.getY());
                 }
             }
-        }
-        gl.glColor4fv(FloatBuffer.wrap(unclippedSectionColor));
-        for (int i = 0; i < unclippedVectors.size() - 1; i += 2) {
-            Vector unclippedSectorA = unclippedVectors.get(i);
-            Vector unclippedSectorB = unclippedVectors.get(i + 1);
-            gl.glVertex2f(unclippedSectorA.getX(), drawable.getSurfaceHeight() - unclippedSectorA.getY());
-            gl.glVertex2f(unclippedSectorB.getX(), drawable.getSurfaceHeight() - unclippedSectorB.getY());
         }
         gl.glEnd();
     }
