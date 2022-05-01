@@ -7,9 +7,12 @@ import com.jogamp.opengl.glu.GLU;
 import com.jogamp.opengl.util.Animator;
 
 import javax.swing.*;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.nio.FloatBuffer;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -26,13 +29,13 @@ public class Clipping implements GLEventListener, MouseListener {
     private final FloatBuffer clippedSectionColor = FloatBuffer.wrap(new float[]{1.0F, 1.0F, 1.0F});//цвет отсеченной части отрезка
     private final FloatBuffer unClippedSectionColor = FloatBuffer.wrap(new float[]{1.0F, 0.0F, 0.0F});//цвет не отсеченной части отрезка
 
-    private final List<Vector> sectionVectors = Arrays.asList(
+    private final List<Vector> sectionVectors = new ArrayList<>(Arrays.asList(
             new Vector((float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250)),
             new Vector((float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250)),
             new Vector((float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250)),
             new Vector((float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250)),
             new Vector((float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250))
-    );//массив векторов отсекаемых отрезков
+    ));//массив векторов отсекаемых отрезков
     private GL2 gl;
     private GLU glu;
 
@@ -100,18 +103,6 @@ public class Clipping implements GLEventListener, MouseListener {
         glu.gluLookAt(200, 200, 400, 0d, 0d, 0d, 0d, 0.5d, 0d);
 
         Parallelepiped parallelepiped = new Parallelepiped(new Vector(50, 50, 50), new Vector(-50, -50, -50));
-        sectionVectors.forEach(sectionVector -> clip(sectionVector,
-                new Vector(-sectionVector.x, -sectionVector.y, -sectionVector.z),
-                parallelepiped));
-    }
-
-    /**
-     * Трёхмерное отсечение методом Коэна-Сазерленда.
-     * begin - координаты начала отрезка
-     * end - координаты конца отрезка
-     * plane - координаты отсекающей области
-     */
-    private void clip(Vector begin, Vector end, Parallelepiped parallelepiped) {
         //отрисовка параллелепипеда
         gl.glLineWidth(1);
         gl.glColor3fv(areaColor);
@@ -139,7 +130,21 @@ public class Clipping implements GLEventListener, MouseListener {
         gl.glVertex3f(parallelepiped.min.x, parallelepiped.max.y, parallelepiped.min.z);
         gl.glVertex3f(parallelepiped.min.x, parallelepiped.max.y, parallelepiped.max.z);
         gl.glEnd();
+
+        sectionVectors.forEach(sectionVector -> clip(sectionVector,
+                new Vector(-sectionVector.x, -sectionVector.y, -sectionVector.z),
+                parallelepiped));
+    }
+
+    /**
+     * Трёхмерное отсечение методом Коэна-Сазерленда.
+     * begin - координаты начала отрезка
+     * end - координаты конца отрезка
+     * plane - координаты отсекающей области
+     */
+    private void clip(Vector begin, Vector end, Parallelepiped parallelepiped) {
         //отрисовка всего отрезка
+        gl.glLineWidth(1);
         gl.glColor3fv(clippedSectionColor);
         gl.glBegin(GL2.GL_LINES);
         gl.glVertex3f(begin.x, begin.y, begin.z);
@@ -151,9 +156,9 @@ public class Clipping implements GLEventListener, MouseListener {
 
         Vector tempBegin = new Vector(begin.x, begin.y, begin.z);
         Vector tempEnd = new Vector(end.x, end.y, end.z);
-        gl.glLineWidth(5);
         while (true) {
             if ((outCodeBegin | outCodeEnd) == 0) { //отрезок полностью видимый
+                gl.glLineWidth(5);
                 gl.glColor3fv(unClippedSectionColor);
                 gl.glBegin(GL2.GL_LINES);
                 gl.glVertex3f(tempBegin.x, tempBegin.y, tempBegin.z);
@@ -244,16 +249,19 @@ public class Clipping implements GLEventListener, MouseListener {
 
     @Override
     public void mouseReleased(MouseEvent mouseEvent) {
-        //ЛКМ - добавляем вектор многоугольника
+        //ЛКМ - очистка / генерация новых отрезков
         if (mouseEvent.getButton() == MouseEvent.BUTTON1) {
-            polygonVectors.add(new Vector(mouseEvent.getPoint()));
-            //ПКМ - добавляем вектор отрезка
-        } else if (mouseEvent.getButton() == MouseEvent.BUTTON2) {
-            sectionVectors.add(new Vector(mouseEvent.getPoint()));
-            //ПКМ - очищаем массивы векторов
-        } else if (mouseEvent.getButton() == MouseEvent.BUTTON3) {
-            polygonVectors.clear();
-            sectionVectors.clear();
+            if (sectionVectors.isEmpty()) {
+                sectionVectors.addAll(Arrays.asList(
+                        new Vector((float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250)),
+                        new Vector((float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250)),
+                        new Vector((float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250)),
+                        new Vector((float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250)),
+                        new Vector((float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250), (float) (Math.random() * 500 - 250))
+                ));
+            } else {
+                sectionVectors.clear();
+            }
         }
     }
 
