@@ -94,57 +94,6 @@ public class Clipping implements GLEventListener, MouseListener {
         }
         gl.glColor3fv(unclippedSectionColor);
         for (int i = 0; i < polygonVectors.size(); i++) {
-            //вектор начала РЕБРА
-            Vector edgeVectorA = polygonVectors.get(i);
-            //вектор конца РЕБРА
-            Vector edgeVectorB = polygonVectors.get((i + 1) % polygonVectors.size());
-            //вектор РЕБРА
-            Vector edgeVector = edgeVectorB.difference(edgeVectorA);
-            //левая нормаль РЕБРА
-            Vector edgeNormal = edgeVector.leftNormal();
-            for (int j = 0; j < sectionVectors.size() - 1; j += 2) {
-                //вектор начала ОТРЕЗКА
-                Vector sectionVectorA = sectionVectors.get(j);
-                //вектор конца ОТРЕЗКА
-                Vector sectionVectorB = sectionVectors.get(j + 1);
-                //вектор ОТРЕЗКА
-                Vector sectionVector = sectionVectorB.difference(sectionVectorA);
-                //Каждый отсекаемый отрезок содержит координаты начала и конца, а также два параметра tA и tB, соответствующие началу и концу отрезка.
-                float tA = 0.0f;
-                float tB = 1.0f;
-                //Для каждого ребра E вычисляется параметр tE, описывающий пересечение E с прямой, на которой лежит отрезок P.
-                float tE = edgeVector.crossProduct(edgeVectorA.difference(sectionVectorA)) / edgeVector.crossProduct(sectionVector);
-                //Вычисляется скалярное произведение вектора E и внешней нормали N, в зависимости от знака которого возникает одна из следующих ситуаций:
-                float dotProduct = edgeNormal.dotProduct(sectionVector);
-                switch (Integer.compare((int) dotProduct, 0)) {
-                    //E · N < 0 — отрезок P направлен с внутренней на внешнюю сторону ребра E. В этом случае параметр tA заменяется на tE, если tE > tA.
-                    case -1:
-                        if (tE > tA) {
-                            tA = tE;
-                        }
-                        break;
-                    //E · N > 0 — отрезок P направлен с внешней на внутреннюю сторону ребра E. В этом случае параметр tB заменяется на tE, если tE < tB.
-                    case 1:
-                        if (tE < tB) {
-                            tB = tE;
-                        }
-                        break;
-                    //E · N = 0 — отрезок P параллелен ребру E. Отрезок P отбрасывается как невидимый, если находится по правую сторону от E.
-                    case 0:
-                        if (edgeVector.crossProduct(edgeVectorB.difference(sectionVectorA)) < 0) continue;
-                        break;
-                }
-                //Если tA <  tB, то заданная параметрами tA и tB часть отрезка P видима. В противном случае отрезок P полностью невидим.
-                if (tA < tB) {
-                    //вектор начала неотсеченного куска ОТРЕЗКА
-                    Vector unclippedSectionA = sectionVectorA.sum(sectionVectorB.difference(sectionVectorA).product(tA));
-                    //вектор конца неотсеченного куска ОТРЕЗКА
-                    Vector unclippedSectionB = sectionVectorA.sum(sectionVectorB.difference(sectionVectorA).product(tB));
-                    //отрисовка неотсеченного куска ОТРЕЗКА
-                    gl.glVertex2f(unclippedSectionA.getX(), drawable.getSurfaceHeight() - unclippedSectionA.getY());
-                    gl.glVertex2f(unclippedSectionB.getX(), drawable.getSurfaceHeight() - unclippedSectionB.getY());
-                }
-            }
         }
         gl.glEnd();
     }
