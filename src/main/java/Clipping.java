@@ -13,7 +13,7 @@ import java.nio.FloatBuffer;
 import java.util.Arrays;
 import java.util.List;
 
-public class Clipping implements GLEventListener {
+public class Clipping implements GLEventListener, MouseListener {
 
     private final static int TOP = 32;
     private final static int BOTTOM = 16;
@@ -46,9 +46,10 @@ public class Clipping implements GLEventListener {
         GLCanvas canvas = new GLCanvas();
         canvas.setSize(frame.getSize());
         canvas.setLocation(0, 0);
-        //добавление слушателя GL - инстанса самого класса
+        //доабвление слушателей GL и мыщи - инстанса самого класса
         Clipping clipping = new Clipping();
         canvas.addGLEventListener(clipping);
+        canvas.addMouseListener(clipping);
         //добавление канвы на фрейм
         frame.add(canvas);
         final Animator animator = new Animator(canvas);
@@ -231,5 +232,36 @@ public class Clipping implements GLEventListener {
 
 
     public void dispose(GLAutoDrawable glAutoDrawable) {
+    }
+
+    @Override
+    public void mouseClicked(MouseEvent mouseEvent) {
+    }
+
+    @Override
+    public void mousePressed(MouseEvent mouseEvent) {
+    }
+
+    @Override
+    public void mouseReleased(MouseEvent mouseEvent) {
+        //ЛКМ - добавляем вектор многоугольника
+        if (mouseEvent.getButton() == MouseEvent.BUTTON1) {
+            polygonVectors.add(new Vector(mouseEvent.getPoint()));
+            //ПКМ - добавляем вектор отрезка
+        } else if (mouseEvent.getButton() == MouseEvent.BUTTON2) {
+            sectionVectors.add(new Vector(mouseEvent.getPoint()));
+            //ПКМ - очищаем массивы векторов
+        } else if (mouseEvent.getButton() == MouseEvent.BUTTON3) {
+            polygonVectors.clear();
+            sectionVectors.clear();
+        }
+    }
+
+    @Override
+    public void mouseEntered(MouseEvent mouseEvent) {
+    }
+
+    @Override
+    public void mouseExited(MouseEvent mouseEvent) {
     }
 }
