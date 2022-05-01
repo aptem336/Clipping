@@ -53,9 +53,6 @@ public class Clipping implements GLEventListener {
     }
 
     public void init(GLAutoDrawable drawable) {
-        GL2 gl = drawable.getGL().getGL2();
-        //начала двумерной отрисовки
-        gl.glOrtho(0, drawable.getSurfaceWidth(), 0, drawable.getSurfaceHeight(), 0, 1);
     }
 
     public void reshape(GLAutoDrawable drawable, int x, int y, int width, int height) {
