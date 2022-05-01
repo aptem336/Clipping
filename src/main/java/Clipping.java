@@ -6,8 +6,6 @@ import com.jogamp.opengl.awt.GLCanvas;
 import com.jogamp.opengl.util.Animator;
 
 import javax.swing.*;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.nio.FloatBuffer;
@@ -78,8 +76,8 @@ public class Clipping implements GLEventListener {
             //вектор конца РЕБРА
             Vector edgeVectorB = polygonVectors.get((i + 1) % polygonVectors.size());
             //отрисовка РЕБРА
-            gl.glVertex2f(edgeVectorA.getX(), drawable.getSurfaceHeight() - edgeVectorA.getY());
-            gl.glVertex2f(edgeVectorB.getX(), drawable.getSurfaceHeight() - edgeVectorB.getY());
+            gl.glVertex3f(edgeVectorA.x, edgeVectorA.y, edgeVectorA.z);
+            gl.glVertex3f(edgeVectorB.x, edgeVectorB.y, edgeVectorB.z);
         }
         gl.glColor3fv(clippedSectionColor);
         for (int j = 0; j < sectionVectors.size() - 1; j += 2) {
@@ -88,8 +86,8 @@ public class Clipping implements GLEventListener {
             //вектор конца ОТРЕЗКА
             Vector sectionVectorB = sectionVectors.get(j + 1);
             //отрисовка ОТРЕЗКА
-            gl.glVertex2f(sectionVectorA.getX(), drawable.getSurfaceHeight() - sectionVectorA.getY());
-            gl.glVertex2f(sectionVectorB.getX(), drawable.getSurfaceHeight() - sectionVectorB.getY());
+            gl.glVertex3f(sectionVectorA.x, sectionVectorA.y, sectionVectorA.z);
+            gl.glVertex3f(sectionVectorB.x, sectionVectorB.y, sectionVectorB.z);
         }
         gl.glColor3fv(unclippedSectionColor);
         for (int i = 0; i < polygonVectors.size(); i++) {
