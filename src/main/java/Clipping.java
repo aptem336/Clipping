@@ -14,7 +14,7 @@ import java.nio.FloatBuffer;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Clipping implements GLEventListener, MouseListener {
+public class Clipping implements GLEventListener {
 
     private final float[] clearColor = new float[]{0.25F, 0.25F, 0.25F, 1.0F};//цвет фона
     private final FloatBuffer polygonColor = FloatBuffer.wrap(new float[]{0.0F, 0.0F, 0.0F});//цвет отсекающего полигона
@@ -33,10 +33,9 @@ public class Clipping implements GLEventListener, MouseListener {
         GLCanvas canvas = new GLCanvas();
         canvas.setSize(frame.getSize());
         canvas.setLocation(0, 0);
-        //доабвление слушателей GL и мыщи - инстанса самого класса
+        //добавление слушателя GL - инстанса самого класса
         Clipping clipping = new Clipping();
         canvas.addGLEventListener(clipping);
-        canvas.addMouseListener(clipping);
         //добавление канвы на фрейм
         frame.add(canvas);
         final Animator animator = new Animator(canvas);
@@ -100,36 +99,5 @@ public class Clipping implements GLEventListener, MouseListener {
 
 
     public void dispose(GLAutoDrawable glAutoDrawable) {
-    }
-
-    @Override
-    public void mouseClicked(MouseEvent mouseEvent) {
-    }
-
-    @Override
-    public void mousePressed(MouseEvent mouseEvent) {
-    }
-
-    @Override
-    public void mouseReleased(MouseEvent mouseEvent) {
-        //ЛКМ - добавляем вектор многоугольника
-        if (mouseEvent.getButton() == MouseEvent.BUTTON1) {
-            polygonVectors.add(new Vector(mouseEvent.getPoint()));
-            //ПКМ - добавляем вектор отрезка
-        } else if (mouseEvent.getButton() == MouseEvent.BUTTON2) {
-            sectionVectors.add(new Vector(mouseEvent.getPoint()));
-            //ПКМ - очищаем массивы векторов
-        } else if (mouseEvent.getButton() == MouseEvent.BUTTON3) {
-            polygonVectors.clear();
-            sectionVectors.clear();
-        }
-    }
-
-    @Override
-    public void mouseEntered(MouseEvent mouseEvent) {
-    }
-
-    @Override
-    public void mouseExited(MouseEvent mouseEvent) {
     }
 }
